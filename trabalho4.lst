@@ -1,0 +1,240 @@
+P16 assembler v1.4.0 (Mar  6 2023)	c:\Users\diogo\Desktop\ISEL\Disciplinas\AC\Trabalho4\trabalho4.lst	Wed Jun 14 20:35:01 2023
+
+Sections
+Index   Name            Address   Size
+0       startup         0000      000E 14
+1       .text           000E      00C0 192
+2       .data           00CE      0000 0
+3       .bss            00CE      0004 4
+4       .stack          00D2      0040 64
+
+Symbols
+Name                    Type      Value       Section
+_start                  LABEL     0004 4      startup
+count                   LABEL     00D0 208    .bss
+count_addr              LABEL     0094 148    .text
+count_addr_main         LABEL     0070 112    .text
+empty                   LABEL     0034 52     .text
+inport_addr             LABEL     009C 156    .text
+INPORT_ADDRESS          ABSOLUTE  FF80 65408  startup
+inport_read             LABEL     0096 150    .text
+isr                     LABEL     0072 114    .text
+isr_addr                LABEL     000C 12     startup
+line#86                 LABEL     006C 108    .text
+main                    LABEL     000E 14     .text
+main_addr               LABEL     000A 10     startup
+outport_addr            LABEL     00A4 164    .text
+OUTPORT_ADDRESS         ABSOLUTE  FFC0 65472  startup
+outport_write           LABEL     009E 158    .text
+PTC_ADDR                LABEL     00CC 204    .text
+PTC_ADDRESS             ABSOLUTE  FF00 65280  startup
+PTC_CMD_START           ABSOLUTE  0000 0      startup
+PTC_CMD_STOP            ABSOLUTE  0001 1      startup
+ptc_get_value           LABEL     00B6 182    .text
+ptc_init                LABEL     00BC 188    .text
+ptc_start               LABEL     00A6 166    .text
+ptc_stop                LABEL     00AE 174    .text
+PTC_TC                  ABSOLUTE  0004 4      startup
+PTC_TCR                 ABSOLUTE  0000 0      startup
+PTC_TIR                 ABSOLUTE  0006 6      startup
+PTC_TMR                 ABSOLUTE  0002 2      startup
+STACK_SIZE              ABSOLUTE  0040 64     startup
+stimulus                LABEL     0054 84     .text
+SYSCLK_FREQ             ABSOLUTE  000A 10     startup
+t_fim                   LABEL     00CE 206    .bss
+t_fim_addr              LABEL     0092 146    .text
+t_fim_addr_main         LABEL     006E 110    .text
+tos                     LABEL     0112 274    .stack
+tos_addr                LABEL     0008 8      startup
+
+Code listing
+   1          	    .equ	STACK_SIZE, 64                
+   2           	
+   3          		.equ	INPORT_ADDRESS, 0xFF80       
+   4           	
+   5          		.equ	OUTPORT_ADDRESS, 0xFFC0              
+   6           	
+   7          		.equ	PTC_ADDRESS,  0xFF00         
+   8           	
+   9          		.equ	PTC_TCR, 0                   
+  10          		.equ	PTC_TMR, 2                    
+  11          		.equ	PTC_TC,  4                    
+  12          		.equ	PTC_TIR, 6                    
+  13           	
+  14          		.equ	PTC_CMD_START, 0              
+  15          		.equ	PTC_CMD_STOP, 1               
+  16           	
+  17          		.equ	SYSCLK_FREQ, 0x0A             
+  18           	             
+  19           	
+  20           		.section startup
+  21 0000 01 58		b	_start
+  22 0002 4F 0C		ldr	pc, isr_addr
+  23           	_start:
+  24 0004 1D 0C		ldr	sp, tos_addr
+  25 0006 1F 0C		ldr	pc, main_addr
+  26           	
+  27           	tos_addr:
+  28 0008 12 01		.word	tos
+  29           	main_addr:
+  30 000A 0E 00		.word	main
+  31           	isr_addr:
+  32 000C 72 00		.word	isr
+  33           	
+  34           		.text
+  35           	
+  36           	main:
+  37 000E F0 0E		ldr r0, t_fim_addr_main
+  38 0010 01 60		mov r1, #0
+  39 0012 01 20		str r1, [r0, #0]
+  40 0014 F0 6F		mov r0, #0xFF
+  41 0016 43 5C		bl outport_write ;coloca na saída o resultado e o STIMULUS a 1
+  42 0018 3E 5C		bl inport_read ;lê a entrada
+  43 001A 80 E7		lsl r0, r0, #15
+  44 001C 80 EF		lsr r0, r0, #15 ;coloca em R0 o valor da entrada USER
+  45 001E 11 60		mov r1, #1 
+  46 0020 80 B8		cmp r0, r1
+  47 0022 F5 47		bne main ;se a entrada USER for 0, volta ao início
+  48 0024 10 60		mov r0, #1
+  49 0026 3B 5C		bl outport_write ;coloca a saída STIMULUS a 1 e o resultado 0
+  50 0028 A0 60		mov	r0, #SYSCLK_FREQ
+  51 002A 48 5C		bl	ptc_init ;inicia o timer
+  52 002C 60 B0		mrs r0, cpsr
+  53 002E 01 61		mov r1, #0x10
+  54 0030 80 C8		orr r0, r0, r1
+  55 0032 40 B0		msr cpsr, r0 ;liga as interrupções
+  56           	empty:
+  57 0034 30 5C		bl inport_read ;lê a entrada
+  58 0036 80 E7		lsl r0, r0, #15
+  59 0038 80 EF		lsr r0, r0, #15 ;coloca em R0 o valor da entrada USER
+  60 003A 11 60		mov r1, #1
+  61 003C 80 B8		cmp r0, r1
+  62 003E E7 47		bne main
+  63 0040 2A 5C		bl inport_read ;lê a entrada
+  64 0042 00 E4		lsl r0, r0, #8
+  65 0044 00 EE		lsr r0, r0, #12 ;pega o valor da entrada do bit 4 ao 7
+  66 0046 32 0D		ldr r2, t_fim_addr_main
+  67 0048 21 00		ldr r1, [r2, #0]
+  68 004A 80 B8		cmp r0, r1
+  69 004C F3 47		bne empty ;verifica se o tempo chegou ao fim, se não chegar volta ao estado anterior
+  70 004E 00 0D		ldr r0, count_addr_main
+  71 0050 01 60		mov r1, #0
+  72 0052 01 20		str r1, [r0, #0] ;inicializa a variável COUNT com o valor 0, para apresentar no fim como resultado
+  73           	stimulus:
+  74 0054 00 60		mov r0, #0
+  75 0056 23 5C		bl outport_write
+  76 0058 1E 5C		bl inport_read ;lê a entrada
+  77 005A 80 E7		lsl r0, r0, #15
+  78 005C 80 EF		lsr r0, r0, #15 ;coloca em R0 o valor da entrada USER
+  79 005E 01 60		mov r1, #0
+  80 0060 80 B8		cmp r0, r1
+  81 0062 F8 47		bne stimulus ;se a entrada USER estiver com 1, volta ao estado anterior
+  82 0064 51 0C		ldr r1, count_addr_main
+  83 0066 10 00		ldr r0, [r1, #0]
+  84 0068 80 E0		lsl r0, r0, #1 ;desloca o resultado 1 bit para a esquerda, por causa do bit STIMULUS
+  85 006A 19 5C		bl outport_write
+  86 006C FF 5B		b .
+  87           	
+  88           	t_fim_addr_main:
+  89 006E CE 00		.word t_fim
+  90           		
+  91           	count_addr_main:
+  92 0070 D0 00		.word count
+  93           	
+  94           	isr:
+  95 0072 00 24		push r0
+  96 0074 01 24		push r1
+  97 0076 A0 0E		ldr r0, PTC_ADDR
+  98 0078 01 60		mov r1, #0
+  99 007A 01 2B		strb r1, [r0, #PTC_TIR]
+ 100 007C A0 0C		ldr r0, t_fim_addr
+ 101 007E 01 00		ldr r1, [r0, #0]
+ 102 0080 91 A0		add r1, r1, #1
+ 103 0082 01 20		str r1, [r0, #0]
+ 104 0084 70 0C		ldr r0, count_addr
+ 105 0086 01 00		ldr r1, [r0, #0]
+ 106 0088 91 A0		add r1, r1, #1
+ 107 008A 01 20		str r1, [r0, #0]
+ 108 008C 01 04		pop r1
+ 109 008E 00 04		pop r0
+ 110 0090 20 B0		movs pc, lr
+ 111           	
+ 112           	t_fim_addr:
+ 113 0092 CE 00		.word t_fim
+ 114           	
+ 115           	count_addr:
+ 116 0094 D0 00		.word count
+ 117           	
+ 118           	inport_read:
+ 119 0096 21 0C		ldr	r1, inport_addr
+ 120 0098 10 08		ldrb	r0, [r1, #0]
+ 121 009A 0F B7		mov	pc, lr
+ 122           	
+ 123           	inport_addr:
+ 124 009C 80 FF		.word	INPORT_ADDRESS
+ 125           	
+ 126           	outport_write:
+ 127 009E 21 0C		ldr	r1, outport_addr
+ 128 00A0 10 28		strb	r0, [r1, #0]
+ 129 00A2 0F B7		mov	pc, lr
+ 130           	
+ 131           	outport_addr:
+ 132 00A4 C0 FF		.word	OUTPORT_ADDRESS
+ 133           	
+ 134           	ptc_start:
+ 135 00A6 20 0D		ldr	r0, PTC_ADDR
+ 136 00A8 01 60		mov	r1, #PTC_CMD_START
+ 137 00AA 01 28		strb	r1, [r0, #PTC_TCR]
+ 138 00AC 0F B7		mov	pc, lr
+ 139           	
+ 140           	ptc_stop:
+ 141 00AE E0 0C		ldr	r0, PTC_ADDR
+ 142 00B0 11 60		mov	r1, #PTC_CMD_STOP
+ 143 00B2 01 28		strb	r1, [r0, #PTC_TCR]
+ 144 00B4 0F B7		mov	pc, lr
+ 145           	
+ 146           	ptc_get_value:
+ 147 00B6 A1 0C		ldr	r1, PTC_ADDR
+ 148 00B8 10 0A		ldrb	r0, [r1, #PTC_TC]
+ 149 00BA 0F B7		mov	pc, lr
+ 150           	
+ 151           	ptc_init:
+ 152 00BC 0E 24		push lr
+ 153 00BE 00 24		push r0
+ 154 00C0 F6 5F		bl ptc_stop
+ 155 00C2 00 04		pop r0
+ 156 00C4 31 0C		ldr r1, PTC_ADDR
+ 157 00C6 10 29		strb r0, [r1, #PTC_TMR]
+ 158 00C8 EE 5F		bl ptc_start
+ 159 00CA 0F 04		pop pc
+ 160           	
+ 161           	PTC_ADDR:
+ 162 00CC 00 FF		.word	PTC_ADDRESS
+ 163           	
+ 164           	; Seccao:    data
+ 165           	; Descricao: Guarda as variáveis globais com um valor inicial definido
+ 166           	;
+ 167           		.data
+ 168           	
+ 169           	; Seccao:    bss
+ 170           	; Descricao: Guarda as variáveis globais sem valor inicial definido
+ 171           	;
+ 172           		.bss
+ 173           	
+ 174           	t_fim:
+ 175 00CE 00   		.space 2
+ 175 00CF 00
+ 176           	
+ 177           	count:
+ 178 00D0 00   		.space 2
+ 178 00D1 00
+ 179           	
+ 180           	
+ 181           	; Seccao:    stack
+ 182           	; Descricao: Implementa a pilha com o tamanho definido pelo simbolo STACK_SIZE
+ 183           	;
+ 184           		.stack
+ 185 00D2 00   		.space	STACK_SIZE
+ 185 .... ..
+ 185 0111 00
+ 186           	tos:
